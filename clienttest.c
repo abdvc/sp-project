@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
 	{
 	int sock;
 	struct sockaddr_in server;
-	char buf[1024], out[1024];
+	char buf[1024], out[1024], buf2[1024];
     
 
 	/* Create socket */
@@ -50,6 +50,8 @@ int main(int argc, char *argv[])
 	}
 
 	while(1){
+		memset(buf, 0, sizeof(buf));
+		memset(buf2, 0, sizeof(buf2));
 		if (write(STDOUT_FILENO, "Client: ", strlen("Client: ")) < 0) {
 			perror("write");
 			exit(1);
@@ -77,7 +79,7 @@ int main(int argc, char *argv[])
 			exit(1);
 		}
 
-		if(recv(sock, buf, 1024, 0) < 0){
+		if(recv(sock, buf2, 1024, 0) < 0){
 			perror("recv");
 		}else{
 			sprintf(out, "Server: %s\n", buf);
