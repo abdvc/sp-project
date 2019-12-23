@@ -55,7 +55,9 @@ void setUpSocket(char* ip) {
    
     serv_addr.sin_family = AF_INET; 
     serv_addr.sin_port = htons(PORT);
-       
+    //New Line below -DS
+    serv_addr.sin_addr.s_addr = inet_addr("192.168.1.5");
+	
     // Convert IPv4 and IPv6 addresses from text to binary form 
     if(inet_pton(AF_INET, ip, &serv_addr.sin_addr)<=0)  
     { 
@@ -95,10 +97,23 @@ void setCell_(int row,int col,int piece,int num)
 		gtk_image_set_from_file(squares[row][col],"resources/images/wp.png");
 		
 	}
+	else if (piece == 3) 
+	{
+		gtk_widget_set_opacity (squares[row][col], 1);
+		gtk_image_set_from_file(squares[row][col],"resources/images/bk.png");
+		
+	}
+	else if (piece == 4) 
+	{
+		gtk_widget_set_opacity (squares[row][col], 1);
+		gtk_image_set_from_file(squares[row][col],"resources/images/wk.png");
+		
+	}
 	else
 		gtk_widget_set_opacity (squares[row][col], 0);
 	gtk_widget_show(squares[row][col]);
 }
+
 
 
 void callback( GtkWidget *widget, gpointer nr)
@@ -139,7 +154,16 @@ void callback( GtkWidget *widget, gpointer nr)
 		int initial_row = loc / 8;
 		
 		if (cells[initial_row][initial_col] != 0) {
+			//New Lines Below -DS
+			
 			int piece = cells[initial_row][initial_col];
+			if (dest_row == 0 && piece == 2){
+				piece = 4;
+			}
+			else if (dest_row == 7 && piece == 1){
+				piece = 3;
+			}
+				
 			g_print("dest\n");
 			//update destination cell
 			setCell_(dest_row,dest_col,piece,num);
@@ -148,8 +172,11 @@ void callback( GtkWidget *widget, gpointer nr)
 			setCell_(initial_row,initial_col,0,loc);
 			
 			cells[initial_row][initial_col] = 0;
+		
 			cells[dest_row][dest_col] = piece;
+
 		}
+		
 		loc = -1;
 	}
 }
