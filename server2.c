@@ -26,7 +26,7 @@ int state[8][8] = {
 int conq;
 
 int validateMove(int arr[], int piece);
-void updateState();
+void updateState(int arr[], int piece);
 
 int main()
 {
@@ -109,7 +109,7 @@ int main()
 		if (turnstates[0] == 1){
 			if (arr[4] == BLACK) {
 				if(validateMove(arr, BLACK) == 1)
-					updateState();
+					updateState(arr, BLACK);
 			}
 		}
 		arr[4] = conq;
@@ -161,6 +161,7 @@ int validateMove(int arr[], int piece) {
 	return 1;
 }
 
-void updateState() {
-
+void updateState(int arr[], int piece) {
+	state[arr[3]][arr[2]] = piece;
+	state[arr[1]][arr[0]] = EMPTY;
 }
