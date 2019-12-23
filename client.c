@@ -24,6 +24,9 @@ int cells[8][8] = {
 
 struct GtkImage* squares[8][8];
 
+//turn and piece;
+int turn[];
+
 //button clicked function
 void callback( GtkWidget *widget, gpointer nr);
 
@@ -38,6 +41,8 @@ GtkWidget* contents;
 
 // Contains the squares of the board and the pieces placed on these squares.
 GtkGrid* board;
+
+
 
 int sock = 0;
 struct sockaddr_in serv_addr;
@@ -54,8 +59,6 @@ void setUpSocket(char* ip) {
    
     serv_addr.sin_family = AF_INET; 
     serv_addr.sin_port = htons(PORT);
-    //New Line below -DS
-    serv_addr.sin_addr.s_addr = inet_addr("192.168.1.5");
 	
     // Convert IPv4 and IPv6 addresses from text to binary form 
     if(inet_pton(AF_INET, ip, &serv_addr.sin_addr)<=0)  
@@ -68,11 +71,10 @@ void setUpSocket(char* ip) {
     { 
         g_print("\nConnection Failed. Server not started? \n"); 
         return -1; 
-    } 
+    }
 	
-    send(sock , hello , strlen(hello) , 0 );
-	recv(sock,valread,sizeof(valread),0);
-	g_print(valread);
+	recv(sock,turn,sizeof(turn),0);
+	g_print("%d",turn[0]);
     //while ((valread = recv(sock,valread,sizeof(valread),0)) < 0) {
 	//	
 	//} 
@@ -114,34 +116,18 @@ void setCell_(int row,int col,int piece,int num)
 }
 
 
-
 void callback( GtkWidget *widget, gpointer nr)
 {	
-	/*	GtkWidget *dialog;
-	dialog = gtk_message_dialog_new(GTK_WINDOW(window),
-            GTK_DIALOG_DESTROY_WITH_PARENT,
-            GTK_MESSAGE_INFO,
-            GTK_BUTTONS_OK,
-            "Download Completed");
-	gtk_window_set_title(GTK_WINDOW(dialog), "Information");
-	gtk_dialog_run(GTK_DIALOG(dialog));
-	gtk_widget_destroy(dialog);
-	*/
+	
 	
 	
 	int num = GPOINTER_TO_INT(nr);
-	g_print ("loc: %d\n",loc);
-	if (loc == -1) {
+	if (loc == -1 && turn[0] == 1) {
 		int col = num % 8;
 		int row = num/8;
 		
-		
-	
-		g_print ("num: %d\nrow: %d\ncol: %d\ncell value: %d\n",num,row,col);
-		
-		if (cells[row][col] != 0) {
+		if (cells[row][col] == turn[1]) {
 			loc = num;
-			g_print ("inside if\n");
 		}
 	}
 	
@@ -156,24 +142,47 @@ void callback( GtkWidget *widget, gpointer nr)
 			//New Lines Below -DS
 			
 			int piece = cells[initial_row][initial_col];
+			
 			if (dest_row == 0 && piece == 2){
 				piece = 4;
 			}
 			else if (dest_row == 7 && piece == 1){
 				piece = 3;
 			}
-				
-			g_print("dest\n");
-			//update destination cell
-			setCell_(dest_row,dest_col,piece,num);
-			g_print("init\n");
-			//update initial cell
-			setCell_(initial_row,initial_col,0,loc);
 			
-			cells[initial_row][initial_col] = 0;
-		
-			cells[dest_row][dest_col] = piece;
-
+			int move[4] = {initial_row,initial_col,dest_row,dest_col};
+			int response = send(sock , move , sizeof(move) , 0 );
+			
+			while (response < 0) {
+				g_print("send error, trying again in 3 seconds");
+				response = send(sock , move , sizeof(move) , 0 );
+			}
+			
+			int update[5];
+			recv(sock,update,sizeof(update),0);
+			if (update[0] >-1) {
+			//update initial and destination in GUI
+			setCell_(update[2],update[3],piece,num);
+			setCell_(update[0],update[1],0,loc);
+			
+			//setCell_(dest_row,dest_col,piece,num);
+			//setCell_(initial_row,initial_col,0,loc);
+			
+			//update initial and destination in game state
+			cells[update[0]][update[1]] = 0;
+			cells[update[2]][update[3]] = piece;
+			
+			//cells[initial_row][initial_col] = 0;
+			//cells[dest_row][dest_col] = piece;
+			
+			if (abs( update[0] - update[1]) == 2 && abs( update[0] - update[1]) == 2 && update[4] == 1) {
+				setCell_(update[2]-1,update[3]-1,0,num-8-1);
+				cells[update[2]-1][update[3]-1] = 0;
+			}
+			
+			turn[0] = 0;
+			}
+			
 		}
 		
 		loc = -1;
@@ -220,7 +229,6 @@ static void activate (GtkApplication* app, gpointer user_data)
 				GtkWidget* square = gtk_image_new_from_file("resources/images/ws.png");
 				gtk_widget_show(square);
 				gtk_overlay_add_overlay(overlay, square);
-				g_print("yolo\n\n\n\n");
 				
 				img = gtk_image_new_from_file("resources/images/bp.png");
 				gtk_widget_set_opacity (img, 0);
@@ -300,7 +308,27 @@ static void activate (GtkApplication* app, gpointer user_data)
 	gtk_widget_show(contents);
 
 	gtk_widget_show(window);
-  
+	
+	//asking for IP
+	GtkDialog *dialog;
+	
+	dialog = gtk_dialog_new_with_buttons ("IP",NULL,0,"OK",NULL,1);
+	
+	GtkEntryBuffer *buffer = gtk_entry_buffer_new (NULL,-1);
+	GtkEntry* entry = gtk_entry_new_with_buffer (buffer);
+	gtk_widget_show(entry);
+	GtkWidget* vbox = gtk_dialog_get_content_area(dialog);
+	gtk_container_add(GTK_CONTAINER(vbox),entry);
+	
+	int result = gtk_dialog_run(GTK_DIALOG(dialog));
+	if (result = 1) {
+		serv_addr.sin_addr.s_addr = inet_addr(gtk_entry_get_text (entry));
+	}
+	gtk_widget_destroy(dialog);
+	
+	
+	
+	
 }
 
 int
