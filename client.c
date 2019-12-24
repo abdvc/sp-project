@@ -78,7 +78,7 @@ void setUpSocket(char* ip) {
 	int move[5];
 	int len;
 	while (1) {
-		len = recv(sock,move,sizeof(turn),0);
+		len = recv(sock,move,sizeof(move),0);
 		if (len > -1) {
 			if (turn[1] == 1) {
 				setCell_(move[0],move[1],0);
@@ -88,7 +88,7 @@ void setUpSocket(char* ip) {
 			}
 			else {
 				setCell_(move[0],move[1],0);
-				setCell_(move[2][3],1);
+				setCell_(move[2],move[3],1);
 				cells[move[0]][move[1]] = 0;
 				cells[move[2]][move[3]] = 1;
 			}
