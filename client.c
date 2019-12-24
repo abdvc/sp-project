@@ -75,6 +75,29 @@ void setUpSocket(char* ip) {
 	
 	recv(sock,turn,sizeof(turn),0);
 	g_print("%d",turn[0]);
+	int move[5];
+	int len;
+	while (1) {
+		len = recv(sock,move,sizeof(turn),0);
+		if (len > -1) {
+			if (turn[1] == 1) {
+				setCell_(move[0],move[1],0);
+				setCell_(move[2][3],2);
+				cells[move[0]][move[1]] = 0;
+				cells[move[2]][move[3]] = 2;		
+			}
+			else {
+				setCell_(move[0],move[1],0);
+				setCell_(move[2][3],1);
+				cells[move[0]][move[1]] = 0;
+				cells[move[2]][move[3]] = 1;
+			}
+			if (move[4] == 1) {
+				setCell_(move[0]+1,move[1]+1,0);
+				cells[move[0]+1][move[1]+1] = 0;
+			}		
+		}	
+	}
     //while ((valread = recv(sock,valread,sizeof(valread),0)) < 0) {
 	//	
 	//} 
@@ -83,7 +106,7 @@ void setUpSocket(char* ip) {
 }
 
 
-void setCell_(int row,int col,int piece,int num) 
+void setCell_(int row,int col,int piece) 
 {	
 	if (piece == 1) 
 	{	
@@ -162,8 +185,8 @@ void callback( GtkWidget *widget, gpointer nr)
 			recv(sock,update,sizeof(update),0);
 			if (update[0] >-1) {
 			//update initial and destination in GUI
-			setCell_(update[2],update[3],piece,num);
-			setCell_(update[0],update[1],0,loc);
+			setCell_(update[2],update[3],piece);
+			setCell_(update[0],update[1],0);
 			
 			//setCell_(dest_row,dest_col,piece,num);
 			//setCell_(initial_row,initial_col,0,loc);
@@ -176,7 +199,7 @@ void callback( GtkWidget *widget, gpointer nr)
 			//cells[dest_row][dest_col] = piece;
 			
 			if (abs( update[0] - update[1]) == 2 && abs( update[0] - update[1]) == 2 && update[4] == 1) {
-				setCell_(update[2]-1,update[3]-1,0,num-8-1);
+				setCell_(update[2]-1,update[3]-1,0);
 				cells[update[2]-1][update[3]-1] = 0;
 			}
 			
