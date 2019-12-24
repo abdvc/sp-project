@@ -5,7 +5,7 @@
 #include <unistd.h> 
 #include <string.h> 
 
-#define PORT 8080 
+#define PORT 9000
 #define WIDTH 8
 #define HEIGHT 8
 
@@ -23,7 +23,7 @@ int cells[8][8] = {
 };
 
 struct GtkImage* squares[8][8];
-
+char * ip;
 //turn and piece;
 int turn[];
 
@@ -47,42 +47,41 @@ GtkGrid* board;
 int sock = 0;
 struct sockaddr_in serv_addr;
 
-void setUpSocket(char* ip) {
-    int valread;
-    char *hello = "Hello from client"; 
-    char buffer[1024] = {0}; 
+void setUpSocket() {
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
     { 
         g_print("\n Socket creation error \n"); 
         return -1; 
     } 
    
+    
     serv_addr.sin_family = AF_INET; 
     serv_addr.sin_port = htons(PORT);
-	
+    	
     // Convert IPv4 and IPv6 addresses from text to binary form 
-    if(inet_pton(AF_INET, ip, &serv_addr.sin_addr)<=0)  
-    { 
-        g_print("\nInvalid address/ Address not supported \n"); 
-        return -1; 
-    } 
-   
+    //if(inet_pton(AF_INET, serv_addr.sin_addr.s_addr, &serv_addr.sin_addr)<=0)  
+    //{ 
+    //    g_print("\nInvalid address/ Address not supported \n"); 
+    //    return -1; 
+    //} 
     if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) 
     { 
         g_print("\nConnection Failed. Server not started? \n"); 
         return -1; 
     }
 	
-	recv(sock,turn,sizeof(turn),0);
+	recv(sock,turn,8,0);
 	g_print("%d",turn[0]);
-	int move[5];
+	int move[5] = {0};
 	int len;
+	g_print("outside while\n");
 	while (1) {
 		len = recv(sock,move,sizeof(move),0);
-		if (len > -1) {
+		g_print("passed recv");
+		if (len > -1 && move != NULL) {
 			if (turn[1] == 1) {
 				setCell_(move[0],move[1],0);
-				setCell_(move[2][3],2);
+				setCell_(move[2],move[3],2);
 				cells[move[0]][move[1]] = 0;
 				cells[move[2]][move[3]] = 2;		
 			}
@@ -92,10 +91,11 @@ void setUpSocket(char* ip) {
 				cells[move[0]][move[1]] = 0;
 				cells[move[2]][move[3]] = 1;
 			}
-			if (move[4] == 1) {
+			if (move != NULL && move[4] == 1) {
 				setCell_(move[0]+1,move[1]+1,0);
 				cells[move[0]+1][move[1]+1] = 0;
-			}		
+			}
+			turn[0] = 1;		
 		}	
 	}
     //while ((valread = recv(sock,valread,sizeof(valread),0)) < 0) {
@@ -143,7 +143,7 @@ void callback( GtkWidget *widget, gpointer nr)
 {	
 	
 	
-	
+	g_print("turn: %d\n",turn[0]);
 	int num = GPOINTER_TO_INT(nr);
 	if (loc == -1 && turn[0] == 1) {
 		int col = num % 8;
@@ -233,7 +233,7 @@ static void activate (GtkApplication* app, gpointer user_data)
 			gtk_grid_attach(board, img, j, i, 1, 1);
 		}
 	}
-	 
+	
 	int counter = 0;
 	GtkWidget* button;
 	for (int row = 0; row < WIDTH; ++row) {
@@ -335,8 +335,8 @@ static void activate (GtkApplication* app, gpointer user_data)
 	//asking for IP
 	GtkDialog *dialog;
 	
-	dialog = gtk_dialog_new_with_buttons ("IP",NULL,0,"OK",NULL,1);
-	
+	dialog = gtk_dialog_new_with_buttons ("IP",NULL,0,"OK",1,NULL);
+	g_print("hi");
 	GtkEntryBuffer *buffer = gtk_entry_buffer_new (NULL,-1);
 	GtkEntry* entry = gtk_entry_new_with_buffer (buffer);
 	gtk_widget_show(entry);
@@ -348,9 +348,10 @@ static void activate (GtkApplication* app, gpointer user_data)
 		serv_addr.sin_addr.s_addr = inet_addr(gtk_entry_get_text (entry));
 	}
 	gtk_widget_destroy(dialog);
-	
-	
-	
+	pthread_t my_thread;
+  int a = 10;
+  pthread_create(&my_thread, NULL, setUpSocket, NULL);
+	//setUpSocket();
 	
 }
 
@@ -370,3 +371,4 @@ main (int    argc,
 
   return status;
 }
+

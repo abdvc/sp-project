@@ -23,10 +23,10 @@ int state[8][8] = {
 	{0, 2, 0, 2, 0, 2, 0, 2},
     {2, 0, 2, 0, 2, 0, 2, 0}
 };
-int conq;
+int conq, cx, cy;
 
 int validateMove(int arr[], int piece);
-void updateState(int arr[], int piece);
+int updateState(int arr[], int piece);
 
 int main()
 {
@@ -81,8 +81,7 @@ int main()
 		perror("listen");
 		exit(1);
 	}
-
-	printf("%d\n",1);
+	
     int counter = 0;
     
 	while(counter < 2) {
@@ -97,24 +96,46 @@ int main()
 	//{player turn, piece} 0 - no, 1-client's turn.
 	pkg[0] = turnstates[0]; pkg[1] = BLACK;
     send(newsock[0], pkg, sizeof(pkg), 0);
-    pkg[0] = turnstates[1]; pkg[1] = WHITE;
+    pkg[1] = turnstates[1]; pkg[1] = WHITE;
     send(newsock[1], pkg, sizeof(pkg), 0);
-    
+    int c1, c2;
 	while (1) 
 	{
 		memset(arr, 0, sizeof(arr));
 		
-		recv(newsock[0], arr, sizeof(arr), 0);
+		c1 = recv(newsock[0], arr, sizeof(arr), MSG_DONTWAIT);
 		//arr[0,1,2,3,4] = [initx,inity,destx,desty,piece]
-		if (turnstates[0] == 1){
-			if (arr[4] == BLACK) {
-				if(validateMove(arr, BLACK) == 1)
-					updateState(arr, BLACK);
+		if (c1 > -1 && turnstates[0] == 1 && arr[4] == BLACK){
+			if(validateMove(arr, BLACK) == 1) {
+				arr[4] = updateState(arr, BLACK);
+				turnstates[0] = !turnstates[0];
+				turnstates[1] = !turnstates[1];
 			}
+			else
+				arr[0] = -1;
 		}
-		arr[4] = conq;
-		send(newsock[0], arr, sizeof(arr), 0);
-
+		//printf("%d %d %d %d %d\n",arr[0],arr[1],arr[2],arr[3],arr[4]);
+		
+		memset(arr, 0, sizeof(arr));
+		if (c1 < 0) {
+		c2 = recv(newsock[1], arr, sizeof(arr), MSG_DONTWAIT);
+		//arr[0,1,2,3,4] = [initx,inity,destx,desty,piece]
+		if (c2 > -1 && turnstates[1] == 1 && arr[4] == WHITE){
+			if(validateMove(arr, WHITE) == 1) {
+				arr[4] = updateState(arr, WHITE);
+				turnstates[1] = !turnstates[1];
+				turnstates[0] = !turnstates[0];
+			}
+			else
+				arr[0] = -1;
+		}
+		}
+		//printf("%d %d %d %d %d\n",arr[0],arr[1],arr[2],arr[3],arr[4]);
+		if (c1 > -1 || c2 > -1) {
+			send(newsock[0], arr, sizeof(arr), 0);
+			send(newsock[1], arr, sizeof(arr), 0);
+		}
+		c1, c2 = -1;
 	}
 	
 	close(sock);
@@ -140,20 +161,36 @@ int validateMove(int arr[], int piece) {
 			if (arr[0] > arr[2]) {
 				if (state[arr[1] - my][arr[0] - mx] == piece) {
 					return -1;
+				} else {
+					conq = 1;
+					cy = arr[1] - my;
+					cx = arr[0] - mx;
 				}
 			} else if (arr[0] < arr[2]) {
 				if (state[arr[1] - my][arr[0] + mx] == piece) {
 					return -1;
+				} else {
+					conq = 1;
+					cy = arr[1] - my;
+					cx = arr[0] + mx;
 				}
 			}
 		} else if (piece == WHITE) {
 			if (arr[0] > arr[2]) {
 				if (state[arr[1] + my][arr[0] - mx] == piece) {
 					return -1;
+				} else {
+					conq = 1;
+					cy = arr[1] + my;
+					cx = arr[0] - mx;
 				}
 			} else if (arr[0] < arr[2]) {
 				if (state[arr[1] + my][arr[0] + mx] == piece) {
 					return -1;
+				} else {
+					conq = 1;
+					cy = arr[1] + my;
+					cx = arr[0] + mx;
 				}
 			}
 		}
@@ -161,7 +198,12 @@ int validateMove(int arr[], int piece) {
 	return 1;
 }
 
-void updateState(int arr[], int piece) {
+int updateState(int arr[], int piece) {
 	state[arr[3]][arr[2]] = piece;
 	state[arr[1]][arr[0]] = EMPTY;
+	if (conq == 1) {
+		state[cy][cx] = EMPTY;
+		return 1;
+	}
+	return 0;
 }
